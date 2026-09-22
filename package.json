@@ -1,0 +1,12 @@
+{
+  "name": "lixeira-inteligente",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Repositório do projeto Lixeira Inteligente (IoT + React Native). O app mobile fica em /mobile.",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}
