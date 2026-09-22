@@ -1,0 +1,2 @@
+# Mantém o diretório vazio no versionamento (git não versiona pastas vazias).
+# Remova este arquivo quando houver código-fonte em src/.

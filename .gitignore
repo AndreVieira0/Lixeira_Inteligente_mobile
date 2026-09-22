@@ -17,6 +17,14 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Arquivos de agentes/editores (somente locais, não versionar)
+AGENTS.md
+CLAUDE.md
+.claude/
+
+# Documento de orientações local
+orientacoes.md
+
 # Sistema operacional
 .DS_Store
 Thumbs.db
