@@ -1,7 +1,6 @@
 const { defineConfig } = require('eslint/config');
 const expoConfig = require('eslint-config-expo/flat');
 const tseslint = require('typescript-eslint');
-const eslintConfigPrettier = require('eslint-config-prettier');
 
 module.exports = defineConfig([
   {
@@ -77,6 +76,4 @@ module.exports = defineConfig([
       '@typescript-eslint/no-require-imports': 'off',
     },
   },
-
-  eslintConfigPrettier,
 ]);

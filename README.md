@@ -25,7 +25,6 @@ PROJECT_NUMBER=<número do projeto> ./scripts/setup-github-project.sh
 ## Começando
 
 ```bash
-npm install          # husky (hooks de git) — raiz do repositório
 cd mobile
 npm install
 npm start
@@ -34,4 +33,5 @@ npm start
 ## Convenções
 
 - **Commits:** [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `chore:`, ...).
-- **Lint/format:** ESLint (type-checked) + Prettier, com pre-commit automático via Husky + lint-staged.
+- **Lint/types:** ESLint (type-checked) + TypeScript strict no `mobile/` — rode
+  `npm run lint` e `npm run typecheck` antes de concluir uma tarefa.

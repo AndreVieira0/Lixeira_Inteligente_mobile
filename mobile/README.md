@@ -16,8 +16,7 @@ Este pacote contém o app **React Native (Expo + TypeScript)**.
 | Linguagem    | **TypeScript** (strict)                                 |
 | Navegação    | React Navigation (libs instaladas, rotas ainda não)     |
 | Backend      | Firebase SDK — Authentication, Firestore, Messaging     |
-| Lint/Format  | ESLint (flat config + type-check) + Prettier            |
-| Hooks de git | Husky + lint-staged (lint/format em `pre-commit`)       |
+| Lint/Type    | ESLint (flat config + type-check) + TypeScript strict   |
 | Ambientes    | `.env.development` / `.env.production` (`EXPO_PUBLIC_`) |
 
 ---
@@ -40,7 +39,6 @@ mobile/
 ├── .env.example
 ├── .env.development  # (não versionado)
 ├── .env.production   # (não versionado)
-├── .prettierrc.json
 ├── eslint.config.js
 ├── tsconfig.json
 └── package.json
@@ -55,14 +53,11 @@ Cada pasta de `src/` contém um `README.md` descrevendo sua finalidade e regras.
 Pré-requisitos: Node.js 20+ e o app **Expo Go** (ou emulador).
 
 ```bash
-# 1. Na raiz do repositório: instala apenas o Husky (hooks de git)
-npm install
-
-# 2. Dentro de mobile/
+# 1. Dentro de mobile/
 cd mobile
 npm install
 
-# 3. Suba o servidor de desenvolvimento
+# 2. Suba o servidor de desenvolvimento
 npm start          # ou: npm run android | npm run ios | npm run web
 ```
 
@@ -79,8 +74,6 @@ e preencha os valores antes de configurar integrações reais.
 | `npm run lint`         | Roda o ESLint                             |
 | `npm run lint:fix`     | Corrige problemas de lint automaticamente |
 | `npm run typecheck`    | Tipo-checks TypeScript (`tsc --noEmit`)   |
-| `npm run format`       | Formata com Prettier                      |
-| `npm run format:check` | Verifica formatação                       |
 | `npm run doctor`       | Diagnostica dependências/config do Expo   |
 
 ---
@@ -119,12 +112,11 @@ e preencha os valores antes de configurar integrações reais.
 - Todos os switches devem ser exaustivos (`switch-exhaustiveness-check`).
 - Funções declaradas devem ter retorno explícito sempre que não triviais.
 
-### Lint e formatação
+### Lint e tipagem
 
 - ESLint roda com **type-checking** — rode `npm run typecheck` junto ao lint.
-- Prettier: aspas simples, `trailingComma: all`, 100 colunas, EOF `lf`.
-- Antes de commitar, `husky` + `lint-staged` rodam `prettier` e `eslint --fix`
-  sobre os arquivos em staging automaticamente.
+- TypeScript em modo **strict** (`strict: true`), com regras type-checked do
+  `typescript-eslint` (consistent-type-imports, switch-exhaustiveness-check, etc.).
 
 ### Commits
 

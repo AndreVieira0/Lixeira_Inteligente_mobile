@@ -72,18 +72,6 @@ get_sprint_field() {
   printf '%s' "$value"
 }
 
-get_label_field() {
-  local field="$1" idx="$2" starts start end value
-  starts="$(grep -n '^  - name:' "$SPRINTS_FILE" | cut -d: -f1)"
-  start="$(printf '%s\n' "$starts" | sed -n "${idx}p")"
-  end="$(printf '%s\n' "$starts" | sed -n "$((idx + 1))p")"
-  [ -z "$end" ] && end=999999
-  value="$(sed -n "${start},${end}p" "$SPRINTS_FILE" | sed -n "s/^    ${field}: *//p" | head -n1)"
-  value="${value#\"}"
-  value="${value%\"}"
-  printf '%s' "$value"
-}
-
 SPRINT_COUNT="$(grep -c '^  - numero:' "$SPRINTS_FILE" || true)"
 LABEL_COUNT="$(grep -c '^  - name:' "$SPRINTS_FILE" || true)"
 [ "$SPRINT_COUNT" -gt 0 ] || die "Nenhuma etapa encontrada em sprints.yml."
@@ -95,7 +83,7 @@ create_label() {
     warn "(dry) criaria a label '$name'"
     return
   fi
-  if gh label view "$name" --repo "$REPO" >/dev/null 2>&1; then
+  if [ "$(gh label list --repo "$REPO" --json name --jq "any(.name == \"${name}\")")" = "true" ]; then
     ok "label '$name' já existe"
   else
     gh label create "$name" --repo "$REPO" --description "$desc" --color "$color"
@@ -105,10 +93,15 @@ create_label() {
 
 log "Labels por área:"
 for ((l = 1; l <= LABEL_COUNT; l++)); do
-  lname="$(get_label_field name "$l")"
-  lcolor="$(get_label_field color "$l")"
-  ldesc="$(get_label_field desc "$l")"
-  [ -z "$lname" ] || create_label "$lname" "$lcolor" "$ldesc"
+  lname_lines="$(grep -n '^  - name:' "$SPRINTS_FILE" | cut -d: -f1)"
+  lstart="$(printf '%s\n' "$lname_lines" | sed -n "${l}p")"
+  lend="$(printf '%s\n' "$lname_lines" | sed -n "$((l + 1))p")"
+  [ -z "$lend" ] && lend=999999
+  # o campo `name` está na própria linha de início do bloco (indent de 2 espaços)
+  lname="$(sed -n "${lstart}p" "$SPRINTS_FILE" | sed -E 's/^[[:space:]]*- name:[[:space:]]*"?([^"]*)"?$/\1/')"
+  lcolor="$(sed -n "${lstart},${lend}p" "$SPRINTS_FILE" | sed -n 's/^    color: *//p' | head -n1 | tr -d '"')"
+  ldesc="$(sed -n "${lstart},${lend}p" "$SPRINTS_FILE" | sed -n 's/^    desc: *//p' | head -n1 | tr -d '"')"
+  create_label "$lname" "$lcolor" "$ldesc"
 done
 
 # ---- Processar cada etapa -----------------------------------------------------
