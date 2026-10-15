@@ -6,6 +6,9 @@ node_modules/
 dist/
 build/
 *.tsbuildinfo
+test-results/
+playwright-report/
+*-debug.log
 
 # Variáveis de ambiente (nunca versionar valores reais)
 .env

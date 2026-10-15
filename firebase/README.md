@@ -1,5 +1,16 @@
 # firebase
 
+## Autenticação e perfis
+
+As regras executáveis estão em `firestore/firestore.rules`, com configuração de
+emuladores em `firebase.json`. Cada usuário acessa apenas `users/{seuUid}`; nomes,
+e-mails e datas são validados. Coleções de lixeiras continuam bloqueadas até a
+implementação de suas permissões. O CRUD e o fluxo estão documentados em
+[`mobile/docs/autenticacao.md`](../mobile/docs/autenticacao.md).
+
+Não foi publicado um backend de produção automaticamente. Para ativar o acesso real,
+siga a configuração de Authentication, Firestore e variáveis descrita no documento.
+
 Infraestrutura **Firebase** do projeto (Authentication, Cloud Firestore e Cloud
 Messaging), conforme seções 12 e 23.1 (`plano_dev.md` — Etapa 5).
 

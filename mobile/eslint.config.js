@@ -4,7 +4,7 @@ const tseslint = require('typescript-eslint');
 
 module.exports = defineConfig([
   {
-    ignores: ['.expo', 'dist', 'node_modules', 'assets', 'eslint.config.js'],
+    ignores: ['.expo', 'dist', 'node_modules', 'assets', 'eslint.config.js', 'tests/**/*.cjs'],
   },
 
   expoConfig,

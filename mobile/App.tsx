@@ -1,21 +1,21 @@
 import { StatusBar } from 'expo-status-bar';
 import { type ReactElement } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { PaperProvider } from 'react-native-paper';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
+import { demoMode } from './src/config/environment';
+import { paperTheme } from './src/constants/paperTheme';
+import { AuthProvider } from './src/contexts/AuthContext';
+import { DemoNavigator } from './src/navigation/DemoNavigator';
+import { RootNavigator } from './src/navigation/RootNavigator';
 
 export default function App(): ReactElement {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <SafeAreaProvider>
+      <PaperProvider theme={paperTheme}>
+        {demoMode ? <DemoNavigator /> : <AuthProvider><RootNavigator /></AuthProvider>}
+        <StatusBar style="dark" />
+      </PaperProvider>
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

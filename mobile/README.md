@@ -3,8 +3,35 @@
 Aplicação definitiva do projeto **Lixeira Inteligente** (IoT: ESP32 + HC-SR04 + Firebase).
 Este pacote contém o app **React Native (Expo + TypeScript)**.
 
-> Status: **estrutura inicial**. Nenhuma tela, rota ou integração funcional foi implementada ainda — este
-> setup existe para que as próximas etapas (telas, navegação, Firebase) sejam construídas sobre uma base sólida.
+## Componentes visuais
+
+A interface usa [React Native Paper](https://oss.callstack.com/react-native-paper/docs/guides/getting-started)
+para cartões, campos, botões, busca e indicadores, com ícones Material Community fornecidos por
+[@expo/vector-icons](https://docs.expo.dev/guides/icons/). As fontes dos ícones são empacotadas com o app.
+O tema verde está em `src/constants/paperTheme.ts`; os componentes compartilhados ficam em `src/components/common/`.
+As bibliotecas são dependências do projeto, sob suas respectivas licenças MIT.
+
+## Prévia das telas — APP-02
+
+O modo padrão (`EXPO_PUBLIC_APP_MODE=demo`) abre uma demonstração sem backend:
+login/cadastro → Minhas lixeiras → detalhes, histórico, edição, cadastro e perfil.
+A recuperação informa indisponibilidade enquanto não houver integração de e-mail.
+Não informe credenciais reais na prévia. As alterações ficam em memória e são limpas ao sair.
+
+A interface não exibe faixas de demonstração nem controles de simulação.
+A lista começa com a lixeira mockada da coordenação; a busca aparece a partir de duas lixeiras.
+O botão + cadastra nome/localização e retorna à lista. O lápis edita esses dados e retorna à tela de origem.
+O cadastro cria apenas um cartão sem leitura; a configuração Wi-Fi permanece indisponível sem dispositivo vinculado.
+Dados reais, Better Auth, API e banco Neon serão integrados nas próximas tasks.
+O caminho Firebase legado continua separado e é ativado apenas com o modo `firebase`.
+
+Validação das telas: `npx playwright test --config tests/preview/playwright.config.cjs`.
+O teste usa Chrome instalado e inicia o Expo web na porta 8082, em modo demonstração.
+
+> Status: **autenticação e CRUD de perfil implementados**: cadastro, login, recuperação,
+> sessão persistida, consulta/edição do nome e exclusão de conta com reautenticação.
+> Acesso real depende de configurar o projeto Firebase e publicar as regras.
+> Consulte [lógica de negócio e configuração](docs/autenticacao.md).
 
 ---
 
@@ -14,7 +41,7 @@ Este pacote contém o app **React Native (Expo + TypeScript)**.
 | ------------ | ------------------------------------------------------- |
 | Framework    | React Native via **Expo** (SDK 57)                      |
 | Linguagem    | **TypeScript** (strict)                                 |
-| Navegação    | React Navigation (libs instaladas, rotas ainda não)     |
+| Navegação    | Fluxos condicionais de autenticação; React Navigation disponível para expansão |
 | Backend      | Firebase SDK — Authentication, Firestore, Messaging     |
 | Lint/Type    | ESLint (flat config + type-check) + TypeScript strict   |
 | Ambientes    | `.env.development` / `.env.production` (`EXPO_PUBLIC_`) |
@@ -75,6 +102,9 @@ e preencha os valores antes de configurar integrações reais.
 | `npm run lint:fix`     | Corrige problemas de lint automaticamente |
 | `npm run typecheck`    | Tipo-checks TypeScript (`tsc --noEmit`)   |
 | `npm run doctor`       | Diagnostica dependências/config do Expo   |
+| `npm test`             | Testes das regras de negócio e proteção de ambiente |
+| `npm run test:emulators` | Integração e regras com Firebase local |
+| `npm run test:e2e`      | Jornada completa das telas no Chrome com Firebase local |
 
 ---
 

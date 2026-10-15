@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    function validProfile() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['nome', 'email', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['nome', 'email', 'createdAt', 'updatedAt'])
+        && data.nome is string && data.nome.size() >= 2 && data.nome.size() <= 80
+        && data.nome.matches('.*[^ ].*')
+        && data.email is string && data.email == request.auth.token.email
+        && data.createdAt is timestamp && data.updatedAt is timestamp
+        && data.updatedAt == request.time;
+    }
+    match /users/{uid} {
+      allow get: if isOwner(uid);
+      allow list: if false;
+      allow create: if isOwner(uid) && validProfile() && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(uid) && validProfile()
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.email == resource.data.email;
+      allow delete: if isOwner(uid)
+        && request.time.toMillis() / 1000 - request.auth.token.auth_time < 300;
+    }
+    // Device and bin permissions are intentionally not enabled by the account feature.
+    match /{document=**} { allow read, write: if false; }
+  }
+}
