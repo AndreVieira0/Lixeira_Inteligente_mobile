@@ -6,6 +6,8 @@ Projeto IoT de lixeiras inteligentes — sensores (ESP32 + HC-SR04), Firebase e 
 
 - **`mobile/`** — app React Native (Expo + TypeScript). Toda a documentação de
   convenções, estrutura e comandos está em `mobile/README.md`.
+- **`api/`** — API Hono/TypeScript, sessões Better Auth e migrações PostgreSQL/Neon.
+  Ambiente, rotas e testes locais estão em `api/README.md`.
 - **`firmware/`** *(a criar)* — firmware do ESP32 (C/C++).
 - **`firebase/`** *(a criar)* — estrutura e regras do Firestore.
 

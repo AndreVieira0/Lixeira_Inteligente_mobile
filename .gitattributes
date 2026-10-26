@@ -1,0 +1,2 @@
+# Migration checksums must be reproducible on Windows and Linux.
+api/migrations/*.sql text eol=lf

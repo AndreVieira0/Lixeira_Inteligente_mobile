@@ -17,12 +17,14 @@ Execução direta neste workspace autorizado, preservando arquivos anteriores n�
 
 ## Etapas
 
-- [ ] Instalar dependências fixadas e escrever testes HTTP antes da implementação.
-- [ ] Implementar configuração estrita, conexão PostgreSQL, adaptador de sessão e repositório por conta.
-- [ ] Implementar rotas e middleware; validar autenticação, erros, payload e origem.
-- [ ] Adicionar role de execução sem DDL e runner com checksum/advisory lock; migrações e registro na mesma transação.
-- [ ] Testar PostgreSQL real isolado: aplicação/repetição/rollback/checksum de migrações, sessão assinada real, expiração/revogação, acesso cruzado e permissões SQL.
-- [ ] Executar testes, typecheck/build; revisão independente e documentação dos limites.
+- [x] Instalar dependências fixadas e escrever testes HTTP antes da implementação.
+- [x] Implementar configuração estrita, conexão PostgreSQL, adaptador de sessão e repositório por conta.
+- [x] Implementar rotas e middleware; validar autenticação, erros, payload e origem.
+- [x] Adicionar role de execução sem DDL e runner com checksum/advisory lock; migrações e registro na mesma transação.
+- [x] Testar PostgreSQL real isolado: aplicação/repetição/rollback/checksum de migrações, sessão assinada real, expiração/revogação, acesso cruzado e permissões SQL.
+- [x] Executar testes, typecheck/build; revisão independente e documentação dos limites.
+
+Registro de execução e revisão: [app-04-progresso.md](app-04-progresso.md). Configuração e contratos: [api/README.md](../../api/README.md).
 
 ## Pontos de revisão
 
