@@ -4,8 +4,9 @@ import { AppShell } from '../../components/common/AppShell';
 import { Button, Card, Field, Notice, TextLink } from '../../components/common/AuthUi';
 import type { BinPreview } from '../../types/bin';
 
-export function BinSettingsScreen({ bin, onBack, onSave, onWifi }: {
+export function BinSettingsScreen({ bin, onBack, onSave, onWifi, onMembers }: {
   bin: BinPreview; onBack: () => void; onSave: (name: string, location: string) => void; onWifi: () => void;
+  onMembers?: () => void;
 }): ReactElement {
   const [name, setName] = useState(bin.name);
   const [location, setLocation] = useState(bin.location);
@@ -21,5 +22,6 @@ export function BinSettingsScreen({ bin, onBack, onSave, onWifi }: {
       }} />
     </Card>
     <TextLink onPress={onWifi}>Configurar Wi-Fi</TextLink>
+    {onMembers && <TextLink onPress={onMembers}>Gerenciar membros</TextLink>}
   </AppShell>;
 }

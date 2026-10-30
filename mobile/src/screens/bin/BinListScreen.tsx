@@ -8,9 +8,10 @@ import { Button, Card } from '../../components/common/AuthUi';
 import { colors } from '../../constants/theme';
 import type { BinPreview, PreviewState } from '../../types/bin';
 
-export function BinListScreen({ bins, state, setState, onSelect, onEdit, onAdd, onAccount }: {
+export function BinListScreen({ bins, state, setState, onSelect, onEdit, onAdd, onAccount, error }: {
   bins: BinPreview[]; state: PreviewState; setState: (state: PreviewState) => void;
   onSelect: (id: string) => void; onEdit: (id: string) => void; onAdd: () => void; onAccount: () => void;
+  error?: string | null;
 }): ReactElement {
   const [search, setSearch] = useState('');
   const canSearch = bins.length > 1;
@@ -26,6 +27,6 @@ export function BinListScreen({ bins, state, setState, onSelect, onEdit, onAdd, 
     </>}
     {state === 'loading' && <Card><ActivityIndicator color={colors.primary} /><Text style={s.text}>Carregando suas lixeiras…</Text></Card>}
     {(state === 'empty' || (state === 'ready' && !bins.length)) && <Card><Text style={s.title}>Nenhuma lixeira cadastrada.</Text><Button title="Adicionar primeira lixeira" onPress={onAdd} /></Card>}
-    {state === 'error' && <Card><Text accessibilityRole="alert" style={s.title}>Não foi possível carregar as lixeiras.</Text><Button title="Tentar novamente" onPress={() => { setSearch(''); setState('ready'); }} /></Card>}
+    {state === 'error' && <Card><Text accessibilityRole="alert" style={s.title}>{error ?? 'Não foi possível carregar as lixeiras.'}</Text><Button title="Tentar novamente" onPress={() => { setSearch(''); setState('ready'); }} /></Card>}
   </AppShell>;
 }

@@ -1,6 +1,9 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ---------- Perfis de usuario ----------
     function isOwner(uid) {
       return request.auth != null && request.auth.uid == uid;
     }
@@ -24,7 +27,87 @@ service cloud.firestore {
       allow delete: if isOwner(uid)
         && request.time.toMillis() / 1000 - request.auth.token.auth_time < 300;
     }
-    // Device and bin permissions are intentionally not enabled by the account feature.
-    match /{document=**} { allow read, write: if false; }
+
+    // ---------- Lixeiras e medicoes ----------
+    // Conta tecnica do ESP32 (UID confirmado no Firebase Console).
+    function isTechnical() {
+      return request.auth != null && request.auth.uid == 'HDEgkFJYYVXItl0BhGD5nyw2IOi2';
+    }
+    function isMember() {
+      return request.auth != null && 'members' in resource.data
+        && request.auth.uid in resource.data.members;
+    }
+    function isBinOwner() {
+      return request.auth != null && 'ownerId' in resource.data
+        && request.auth.uid == resource.data.ownerId;
+    }
+    function validUid(u) {
+      return u is string && u.matches('^[A-Za-z0-9_-]{20,40}$');
+    }
+    function validMembers(m) {
+      return m is list
+        && m.size() >= 1 && m.size() <= 10
+        && validUid(m[0])
+        && (m.size() < 2 || validUid(m[1]))
+        && (m.size() < 3 || validUid(m[2]))
+        && (m.size() < 4 || validUid(m[3]))
+        && (m.size() < 5 || validUid(m[4]))
+        && (m.size() < 6 || validUid(m[5]))
+        && (m.size() < 7 || validUid(m[6]))
+        && (m.size() < 8 || validUid(m[7]))
+        && (m.size() < 9 || validUid(m[8]))
+        && (m.size() < 10 || validUid(m[9]));
+    }
+
+    match /bins/{binId} {
+      allow get: if isTechnical() || isMember() || isBinOwner()
+        || (request.auth != null && !('ownerId' in resource.data));
+      allow list: if request.auth != null && request.auth.uid in resource.data.members;
+
+      // ESP32: apenas telemetria (currentLevel/status/lastUpdate)
+      allow update: if isTechnical()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentLevel', 'status', 'lastUpdate'])
+        && request.resource.data.currentLevel is int
+        && request.resource.data.currentLevel >= 0
+        && request.resource.data.currentLevel <= 100
+        && request.resource.data.status is string
+        && request.resource.data.lastUpdate is timestamp;
+
+      // Owner: metadados e membros (ownerId imutavel, owner permanece membro, membros validos, limite 10)
+      allow update: if isBinOwner()
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.auth.uid in request.resource.data.members
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nome', 'local', 'members'])
+        && validMembers(request.resource.data.members);
+
+      // Reivindicacao (sem dono) — usada dentro de transacao no app
+      allow update: if request.auth != null && !('ownerId' in resource.data)
+        && request.resource.data.ownerId == request.auth.uid
+        && request.auth.uid in request.resource.data.members
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ownerId', 'nome', 'local', 'members'])
+        && validMembers(request.resource.data.members);
+
+      allow create, delete: if false;
+    }
+
+    match /measurements/{measurementId} {
+      allow get, list: if request.auth != null && request.auth.uid in resource.data.members;
+      allow create: if isTechnical()
+        && request.resource.data.keys().hasAll(['binId', 'level', 'reason', 'timestamp'])
+        && request.resource.data.keys().hasOnly(['binId', 'level', 'reason', 'timestamp', 'members'])
+        && request.resource.data.binId is string
+        && request.resource.data.level is int
+        && request.resource.data.level >= 0
+        && request.resource.data.level <= 100
+        && request.resource.data.reason is string
+        && request.resource.data.reason in ['level_change', 'reconnection']
+        && request.resource.data.timestamp is timestamp
+        && (!('members' in request.resource.data) || validMembers(request.resource.data.members));
+      allow update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }

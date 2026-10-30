@@ -1,12 +1,13 @@
 import { useState, type ReactElement } from 'react';
 import { Text, View } from 'react-native';
 
+import { AppShell } from '../../components/common/AppShell';
 import { Button, Card, Field, Heading, Notice, Page, TextLink, uiStyles } from '../../components/common/AuthUi';
 import { AUTH_LIMITS } from '../../constants/auth';
 import { useAuth } from '../../contexts/AuthContext';
 import { validateName } from '../../utils/authValidation';
 
-export function ProfileScreen(): ReactElement {
+export function ProfileScreen({ onBack }: { onBack?: () => void } = {}): ReactElement {
   const { identity, profile, busy, error, execute, clearError } = useAuth();
   const [draftName, setNome] = useState<string | null>(null);
   const nome = draftName ?? profile?.nome ?? '';

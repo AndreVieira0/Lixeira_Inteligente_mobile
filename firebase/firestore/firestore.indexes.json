@@ -1,0 +1,22 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "bins",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "members",  "arrayConfig": "CONTAINS" },
+        { "fieldPath": "nome",     "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "measurements",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "members",   "arrayConfig": "CONTAINS" },
+        { "fieldPath": "binId",     "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
