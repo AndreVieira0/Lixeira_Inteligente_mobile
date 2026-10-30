@@ -4,13 +4,15 @@ import { connectFirestoreEmulator, getFirestore, type Firestore } from 'firebase
 
 import { emulatorHost, firebaseConfig, firebaseConfigured, useFirebaseEmulators } from '../../config/environment';
 import { AccountService } from '../accountService';
+import { AlertService } from '../alertService';
 import { BinService } from '../binService';
 
 import { createFirebaseGateway } from './gateway';
+import { createFirebaseAlertGateway } from './alertGateway';
 import { createFirebaseBinGateway } from './binGateway';
 import { initializePersistentAuth } from './persistence';
 
-interface FirebaseClient { auth: Auth; db: Firestore; accounts: AccountService; bins: BinService }
+interface FirebaseClient { auth: Auth; db: Firestore; accounts: AccountService; bins: BinService; alerts: AlertService }
 const APP_NAME = 'lixeira-inteligente-mobile';
 // Preserve the fully initialized client across Fast Refresh; never reuse partial setup.
 const runtime = globalThis as typeof globalThis & {
@@ -43,6 +45,7 @@ export function getFirebaseClient(): FirebaseClient | null {
     db,
     accounts: new AccountService(createFirebaseGateway(auth, db)),
     bins: new BinService(createFirebaseBinGateway(db)),
+    alerts: new AlertService(createFirebaseAlertGateway(db)),
   };
   runtime.__lixeiraFirebase = { configKey, client };
   return client;

@@ -10,10 +10,13 @@ import {
 } from 'react';
 
 import { BinError } from '../services/firebase/binGateway';
-import { observeBins } from '../services/firebase/binObservers';
+import { observeAlerts, observeBins } from '../services/firebase/binObservers';
 import { getFirebaseClient } from '../services/firebase/client';
+import { requestNotificationPermissions, sendBinAlert, setupNotificationHandler } from '../services/notifications';
 import type { BinService } from '../services/binService';
 import type { Bin } from '../types/bin';
+import type { AlertSettings } from '../types/alert';
+import { highestCrossed } from '../utils/alertLogic';
 
 // ---------- types ----------
 
@@ -29,7 +32,6 @@ interface BinValue extends BinState {
   busy: boolean;
   actionError: string | null;
   clearActionError: () => void;
-  /** Run an action through the BinService with busy/error handling. */
   execute: (action: (bins: BinService) => Promise<void>) => Promise<boolean>;
 }
 
@@ -70,6 +72,37 @@ export function BinProvider({ uid, children }: { uid: string; children: ReactNod
   const [actionError, setActionError] = useState<string | null>(null);
   const locked = useRef(false);
 
+  // Refs for threshold-crossing detection
+  const prevBinsRef = useRef<Map<string, number | null>>(new Map());
+  const alertsRef = useRef<Map<string, AlertSettings>>(new Map());
+  const notifReadyRef = useRef(false);
+
+  // Set up notification handler + request permissions once
+  useEffect(() => {
+    setupNotificationHandler();
+    requestNotificationPermissions().then((granted) => {
+      notifReadyRef.current = granted;
+    }).catch(() => { notifReadyRef.current = false; });
+  }, []);
+
+  // Subscribe to alert settings for this user
+  useEffect(() => {
+    if (!uid) return;
+    let active = true;
+    const unsub = observeAlerts(
+      uid,
+      (alerts) => {
+        if (!active) return;
+        const map = new Map<string, AlertSettings>();
+        for (const a of alerts) map.set(a.binId, a);
+        alertsRef.current = map;
+      },
+      () => { /* silent — alerts are best-effort */ },
+    );
+    return () => { active = false; unsub(); };
+  }, [uid]);
+
+  // Subscribe to bins + detect threshold crossings
   useEffect(() => {
     if (!uid) { setState({ bins: [], listState: 'empty', listError: null }); return; }
 
@@ -81,6 +114,26 @@ export function BinProvider({ uid, children }: { uid: string; children: ReactNod
       (bins) => {
         if (!active) return;
         setState({ bins, listState: bins.length > 0 ? 'ready' : 'empty', listError: null });
+
+        // Detect threshold crossings
+        if (notifReadyRef.current && alertsRef.current.size > 0) {
+          for (const bin of bins) {
+            const prevLevel = prevBinsRef.current.get(bin.id) ?? null;
+            const newLevel = bin.currentLevel;
+
+            // Only check if level changed
+            if (prevLevel !== newLevel) {
+              const alert = alertsRef.current.get(bin.id);
+              if (alert && alert.enabled && alert.thresholds.length > 0) {
+                const crossed = highestCrossed(prevLevel, newLevel, alert.thresholds);
+                if (crossed != null) {
+                  sendBinAlert(bin.name, bin.local, newLevel ?? 0, crossed).catch(() => {});
+                }
+              }
+              prevBinsRef.current.set(bin.id, newLevel);
+            }
+          }
+        }
       },
       (error) => {
         if (!active) return;

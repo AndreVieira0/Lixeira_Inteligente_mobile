@@ -7,6 +7,7 @@ import { colors } from '../constants/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { BinProvider, useBins } from '../contexts/BinContext';
 import { useBinDetail } from '../hooks/useBinDetail';
+import { getFirebaseClient } from '../services/firebase/client';
 import { AuthScreen, type AuthMode } from '../screens/auth/AuthScreen';
 import { ProfileScreen } from '../screens/auth/ProfileScreen';
 import { AddBinScreen } from '../screens/bin/AddBinScreen';
@@ -14,6 +15,7 @@ import { BinDetailScreen } from '../screens/bin/BinDetailScreen';
 import { BinHistoryScreen } from '../screens/bin/BinHistoryScreen';
 import { BinListScreen } from '../screens/bin/BinListScreen';
 import { BinSettingsScreen } from '../screens/bin/BinSettingsScreen';
+import { AlertSettingsScreen } from '../screens/bin/AlertSettingsScreen';
 import { ClaimBinScreen } from '../screens/bin/ClaimBinScreen';
 import { MembersScreen } from '../screens/bin/MembersScreen';
 import type { Bin, BinPreview } from '../types/bin';
@@ -101,7 +103,7 @@ function BinDetailContainer({
 
 type BinRoute =
   | { name: 'list' | 'add' | 'account' | 'claim' }
-  | { name: 'detail' | 'history' | 'settings' | 'wifi' | 'members'; id: string };
+  | { name: 'detail' | 'history' | 'settings' | 'wifi' | 'members' | 'alerts'; id: string };
 
 function BinNavigator({ uid, onAccount }: { uid: string; onAccount: () => void }): ReactElement {
   const { bins, listState, listError, execute, busy, actionError, clearActionError } = useBins();
@@ -194,6 +196,32 @@ function BinNavigator({ uid, onAccount }: { uid: string; onAccount: () => void }
             }}
             onWifi={() => { push({ name: 'wifi', id: route.id }); }}
             onMembers={bin.ownerId === uid ? () => { push({ name: 'members', id: route.id }); } : undefined}
+            onAlerts={() => { push({ name: 'alerts', id: route.id }); }}
+          />
+        );
+      }
+
+      if (route.name === 'alerts') {
+        const client = getFirebaseClient();
+        return (
+          <AlertSettingsScreen
+            bin={binToPreview(bin)}
+            busy={busy}
+            error={actionError}
+            onClearError={clearActionError}
+            onBack={back}
+            onLoad={async () => {
+              if (!client) return null;
+              return client.alerts.getAlert(route.id, uid);
+            }}
+            onSave={async (thresholds, enabled) => {
+              const ok = await execute(async (svc) => {
+                void svc; // execute gives BinService; we call AlertService directly
+                if (!client) throw new Error('unavailable');
+                await client.alerts.saveAlert(route.id, uid, thresholds, enabled);
+              });
+              if (ok) back();
+            }}
           />
         );
       }

@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 
 import type { Bin, BinReading } from '../../types/bin';
+import type { AlertSettings } from '../../types/alert';
 
 import { getFirebaseClient } from './client';
 import { toBin, toReading } from './binGateway';
@@ -88,6 +89,46 @@ export function observeReadings(
   return onSnapshot(q, { includeMetadataChanges: false },
     (snap) => {
       next(snap.docs.map((d) => toReading(d.id, d.data() as Record<string, unknown>)));
+    },
+    fail,
+  );
+}
+
+// ---------- Alert settings ----------
+
+/**
+ * Listen to all alert settings for the given uid.
+ * Returns an unsubscribe function.
+ */
+export function observeAlerts(
+  uid: string,
+  next: (alerts: AlertSettings[]) => void,
+  fail: (error: unknown) => void,
+): () => void {
+  const client = getFirebaseClient();
+  if (!client) { next([]); return () => undefined; }
+
+  const q = query(
+    collection(client.db, 'alertSettings'),
+    where('uid', '==', uid),
+  );
+
+  return onSnapshot(q, { includeMetadataChanges: false },
+    (snap) => {
+      next(snap.docs.map((d) => {
+        const data = d.data() as Record<string, unknown>;
+        return {
+          uid: typeof data.uid === 'string' ? data.uid : '',
+          binId: typeof data.binId === 'string' ? data.binId : '',
+          thresholds: Array.isArray(data.thresholds) ? (data.thresholds as number[]) : [],
+          enabled: typeof data.enabled === 'boolean' ? data.enabled : false,
+          updatedAt: data.updatedAt != null
+            ? (typeof (data.updatedAt as { toDate?: () => Date }).toDate === 'function'
+              ? (data.updatedAt as { toDate: () => Date }).toDate().toISOString()
+              : String(data.updatedAt))
+            : null,
+        };
+      }));
     },
     fail,
   );
