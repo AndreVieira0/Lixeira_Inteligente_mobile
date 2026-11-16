@@ -34,8 +34,8 @@ const int INTERVALO_MEDICAO = 1000;  // 1 segundo entre medições
 // WI-FI — PREENCHA COM A SUA REDE
 // =====================================================
 
-const char* WIFI_SSID = "SUA_REDE_WIFI";    // ← TROQUE pelo nome da sua rede
-const char* WIFI_SENHA = "SUA_SENHA_WIFI";  // ← TROQUE pela senha da sua rede
+const char* WIFI_SSID = "LUCILIO 5G";    // ← TROQUE pelo nome da sua rede
+const char* WIFI_SENHA = "Lucilio@09";  // ← TROQUE pela senha da sua rede
 
 // =====================================================
 // FIREBASE AUTHENTICATION
@@ -64,20 +64,15 @@ const char* BIN_ID = "BIN-0002";   // ← Nova lixeira física
 // =====================================================
 // TLS — Validacao de certificado no ESP32 físico
 // =====================================================
-// O ESP32 Arduino core traz um bundle de CAs raiz embutido.
-// Se não compilar com esp_cacert.h, descomente setInsecure()
-// como fallback temporário (não recomendado para produção).
-
-#include <esp_cacert.h>
+// IMPORTANTE: setInsecure() NÃO valida o certificado TLS.
+// É aceitável para testes. Para produção, atualize o ESP32
+// Arduino core para 3.x e troque por:
+//   #include <esp_cacert.h>
+//   cliente.setCACertBundle(x509_crt_bundle_start,
+//     x509_crt_bundle_end - x509_crt_bundle_start);
 
 void configurarTLS(WiFiClientSecure &cliente) {
-  // Usa o bundle de certificados embutido no firmware do ESP32
-  cliente.setCACertBundle(
-    x509_crt_bundle_start,
-    x509_crt_bundle_end - x509_crt_bundle_start
-  );
-  // Fallback temporário (não valida TLS):
-  // cliente.setInsecure();
+  cliente.setInsecure();
 }
 
 // =====================================================
