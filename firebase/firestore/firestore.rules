@@ -87,11 +87,18 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ownerId', 'nome', 'local', 'members'])
         && validMembers(request.resource.data.members);
 
-      allow create, delete: if false;
+      // ESP32: cria a lixeira na primeira medição (doc ainda não existe)
+      allow create: if isTechnical()
+        && request.resource.data.keys().hasOnly(['currentLevel', 'status', 'lastUpdate'])
+        && request.resource.data.currentLevel is int
+        && request.resource.data.currentLevel >= 0
+        && request.resource.data.currentLevel <= 100
+        && request.resource.data.status is string
+        && request.resource.data.lastUpdate is timestamp;
+      allow delete: if false;
     }
 
-    match /measurements/{measurementId} {
-      allow get, list: if request.auth != null && request.auth.uid in resource.data.members;
+    match /measurements/{measurementId} {      allow get, list: if request.auth != null && request.auth.uid in resource.data.members;
       allow create: if isTechnical()
         && request.resource.data.keys().hasAll(['binId', 'level', 'reason', 'timestamp'])
         && request.resource.data.keys().hasOnly(['binId', 'level', 'reason', 'timestamp', 'members'])
