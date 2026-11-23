@@ -99,9 +99,10 @@ export function observeReadings(
 // ---------- History fetch (one-shot, deduplicated) ----------
 
 /**
- * Fetches all readings for a bin, removes heartbeat duplicates and returns
+ * Fetches readings for a bin from the last 30 days, removes heartbeat duplicates and returns
  * only readings where the level actually changed.
  * Uses getDocs (one-shot) instead of onSnapshot to avoid holding a large listener.
+ * Limited to last 30 days to avoid Firestore quota exhaustion.
  */
 export async function fetchReadingsHistory(
   binId: string,
@@ -110,10 +111,14 @@ export async function fetchReadingsHistory(
   const client = getFirebaseClient();
   if (!client) return [];
 
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
   const q = query(
     collection(client.db, 'measurements'),
     where('members', 'array-contains', uid),
     where('binId', '==', binId),
+    where('timestamp', '>=', thirtyDaysAgo),
     orderBy('timestamp', 'desc'),
     limit(MAX_HISTORY_FETCH),
   );
