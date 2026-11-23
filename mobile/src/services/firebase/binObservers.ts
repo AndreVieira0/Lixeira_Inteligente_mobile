@@ -14,7 +14,7 @@ import type { AlertSettings } from '../../types/alert';
 import { getFirebaseClient } from './client';
 import { toBin, toReading } from './binGateway';
 
-const MAX_HISTORY = 50;
+const MAX_HISTORY = 500;
 
 /**
  * Listen to all bins where `uid` is in the `members` array.

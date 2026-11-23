@@ -12,9 +12,28 @@ interface BinDetailState {
 }
 
 /**
+ * Removes consecutive readings with the same level, keeping only the first
+ * occurrence of each level change. Readings arrive in descending order
+ * (most recent first), so we deduplicate in that order.
+ *
+ * Example: [59, 59, 59, 62, 62, 60] → [59, 62, 60]
+ */
+function deduplicateReadings(readings: BinReading[]): BinReading[] {
+  if (readings.length === 0) return readings;
+  const result: BinReading[] = [readings[0]];
+  for (let i = 1; i < readings.length; i++) {
+    if (readings[i].level !== readings[i - 1].level) {
+      result.push(readings[i]);
+    }
+  }
+  return result;
+}
+
+/**
  * Subscribes to real-time readings for a single bin.
  * Only active in Firebase mode — when uid and binId are provided.
  * Cleans up the Firestore listener on unmount or when ids change.
+ * Deduplicates consecutive readings with the same level (heartbeat noise).
  */
 export function useBinDetail(binId: string, uid: string): BinDetailState {
   const [state, setState] = useState<BinDetailState>({
@@ -37,7 +56,11 @@ export function useBinDetail(binId: string, uid: string): BinDetailState {
       uid,
       (readings) => {
         if (!active) return;
-        setState({ readings, readingsState: 'ready', readingsError: null });
+        setState({
+          readings: deduplicateReadings(readings),
+          readingsState: 'ready',
+          readingsError: null,
+        });
       },
       (error) => {
         if (!active) return;

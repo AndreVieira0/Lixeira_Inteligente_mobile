@@ -10,6 +10,16 @@ const assert = require('node:assert/strict');
 const { crossedThresholds, highestCrossed } = require('../src/utils/alertLogic.ts');
 const { AlertService } = require('../src/services/alertService.ts');
 
+// helper inline para testar deduplicateReadings sem importar módulo com React
+function deduplicateReadings(readings) {
+  if (readings.length === 0) return readings;
+  const result = [readings[0]];
+  for (let i = 1; i < readings.length; i++) {
+    if (readings[i].level !== readings[i - 1].level) result.push(readings[i]);
+  }
+  return result;
+}
+
 // ── crossedThresholds ─────────────────────────────────────────────────────────
 
 describe('crossedThresholds — comportamento básico', () => {
@@ -110,5 +120,42 @@ describe('AlertService.saveAlert — validação', () => {
     const svc = new AlertService(makeGateway(async (_b, _u, t) => { savedThresholds = t; }));
     await svc.saveAlert('BIN-0001', 'uid', [], true);
     assert.deepEqual(savedThresholds, []);
+  });
+});
+
+// ── deduplicateReadings ───────────────────────────────────────────────────────
+
+describe('deduplicateReadings', () => {
+  function r(level, id = `m${level}`) {
+    return { id, binId: 'B', level, reason: 'level_change', timestamp: new Date().toISOString() };
+  }
+
+  test('lista vazia retorna vazia', () => {
+    assert.deepEqual(deduplicateReadings([]), []);
+  });
+
+  test('sem duplicatas retorna igual', () => {
+    const input = [r(80), r(60), r(40)];
+    assert.deepEqual(deduplicateReadings(input), input);
+  });
+
+  test('remove consecutivos com mesmo level', () => {
+    const input = [r(59,'a'), r(59,'b'), r(59,'c'), r(62,'d'), r(62,'e'), r(60,'f')];
+    const result = deduplicateReadings(input);
+    assert.deepEqual(result.map(x => x.id), ['a', 'd', 'f']);
+  });
+
+  test('mantém primeiro de cada grupo (ordem desc — mais recente primeiro)', () => {
+    const input = [r(59,'newest'), r(59,'middle'), r(59,'oldest')];
+    const result = deduplicateReadings(input);
+    assert.equal(result.length, 1);
+    assert.equal(result[0].id, 'newest');
+  });
+
+  test('nao remove nao-consecutivos com mesmo level', () => {
+    // 59 → 62 → 59: o segundo 59 não é consecutivo, deve aparecer
+    const input = [r(59,'a'), r(62,'b'), r(59,'c')];
+    const result = deduplicateReadings(input);
+    assert.equal(result.length, 3);
   });
 });
