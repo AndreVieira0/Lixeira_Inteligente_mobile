@@ -121,13 +121,41 @@ export async function fetchReadingsHistory(
   const snap = await getDocs(q);
   const all = snap.docs.map((d) => toReading(d.id, d.data() as Record<string, unknown>));
 
-  // Deduplicate: keep only readings where level changed from previous
+  // 1. Deduplicate consecutive same-level readings (heartbeat noise)
   if (all.length === 0) return all;
-  const result: BinReading[] = [all[0]];
+  const deduped: BinReading[] = [all[0]];
   for (let i = 1; i < all.length; i++) {
-    if (all[i].level !== all[i - 1].level) result.push(all[i]);
+    if (all[i].level !== all[i - 1].level) deduped.push(all[i]);
   }
-  return result;
+
+  // 2. Remove sensor glitches: A → B → A pattern where B lasts < 3 minutes
+  //    Example: 12% → 48% → 12% in 2 minutes → remove the 48%
+  const filtered: BinReading[] = [];
+  const THREE_MINUTES_MS = 3 * 60 * 1000;
+
+  for (let i = 0; i < deduped.length; i++) {
+    const current = deduped[i];
+    const next = deduped[i + 1];
+    const afterNext = deduped[i + 2];
+
+    // Check if this is a glitch: current.level === afterNext.level AND duration < 3 min
+    if (next && afterNext) {
+      const currentTime = new Date(current.timestamp).getTime();
+      const afterNextTime = new Date(afterNext.timestamp).getTime();
+      const durationMs = Math.abs(currentTime - afterNextTime);
+
+      if (current.level === afterNext.level && durationMs < THREE_MINUTES_MS) {
+        // Skip 'next' — it's a glitch between two stable readings
+        filtered.push(current);
+        i++; // skip next iteration (the glitch)
+        continue;
+      }
+    }
+
+    filtered.push(current);
+  }
+
+  return filtered;
 }
 
 // ---------- Alert settings ----------

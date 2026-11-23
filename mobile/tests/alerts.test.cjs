@@ -159,3 +159,102 @@ describe('deduplicateReadings', () => {
     assert.equal(result.length, 3);
   });
 });
+
+// ── removeGlitches (ping-pong filter) ─────────────────────────────────────────
+
+describe('removeGlitches (A→B→A pattern < 3min)', () => {
+  function r(level, timestamp, id = `m${level}`) {
+    return { id, binId: 'B', level, reason: 'level_change', timestamp };
+  }
+
+  function time(base, offsetMinutes) {
+    return new Date(base.getTime() + offsetMinutes * 60 * 1000).toISOString();
+  }
+
+  test('sem oscilação retorna igual', () => {
+    const base = new Date('2026-11-21T23:00:00Z');
+    const input = [
+      r(12, time(base, 0)),
+      r(15, time(base, 5)),
+      r(20, time(base, 10)),
+    ];
+    // Simulando a lógica inline do fetchReadingsHistory
+    const filtered = [];
+    const THREE_MIN = 3 * 60 * 1000;
+    for (let i = 0; i < input.length; i++) {
+      const current = input[i];
+      const next = input[i + 1];
+      const afterNext = input[i + 2];
+      if (next && afterNext) {
+        const currentTime = new Date(current.timestamp).getTime();
+        const afterNextTime = new Date(afterNext.timestamp).getTime();
+        const durationMs = Math.abs(currentTime - afterNextTime);
+        if (current.level === afterNext.level && durationMs < THREE_MIN) {
+          filtered.push(current);
+          i++;
+          continue;
+        }
+      }
+      filtered.push(current);
+    }
+    assert.equal(filtered.length, 3);
+  });
+
+  test('remove ping-pong 12→48→12 em 2 minutos', () => {
+    const base = new Date('2026-11-21T23:00:00Z');
+    const input = [
+      r(12, time(base, 0), 'a'),
+      r(48, time(base, 1), 'b'),  // glitch
+      r(12, time(base, 2), 'c'),
+    ];
+    const filtered = [];
+    const THREE_MIN = 3 * 60 * 1000;
+    for (let i = 0; i < input.length; i++) {
+      const current = input[i];
+      const next = input[i + 1];
+      const afterNext = input[i + 2];
+      if (next && afterNext) {
+        const currentTime = new Date(current.timestamp).getTime();
+        const afterNextTime = new Date(afterNext.timestamp).getTime();
+        const durationMs = Math.abs(currentTime - afterNextTime);
+        if (current.level === afterNext.level && durationMs < THREE_MIN) {
+          filtered.push(current);
+          i++;
+          continue;
+        }
+      }
+      filtered.push(current);
+    }
+    assert.equal(filtered.length, 2);
+    assert.equal(filtered[0].id, 'a');
+    assert.equal(filtered[1].id, 'c');
+  });
+
+  test('não remove se duração >= 3 minutos (mudança legítima)', () => {
+    const base = new Date('2026-11-21T23:00:00Z');
+    const input = [
+      r(12, time(base, 0), 'a'),
+      r(48, time(base, 2), 'b'),  // durou 2 min, depois volta
+      r(12, time(base, 4), 'c'),  // total 4 min entre a e c
+    ];
+    const filtered = [];
+    const THREE_MIN = 3 * 60 * 1000;
+    for (let i = 0; i < input.length; i++) {
+      const current = input[i];
+      const next = input[i + 1];
+      const afterNext = input[i + 2];
+      if (next && afterNext) {
+        const currentTime = new Date(current.timestamp).getTime();
+        const afterNextTime = new Date(afterNext.timestamp).getTime();
+        const durationMs = Math.abs(currentTime - afterNextTime);
+        if (current.level === afterNext.level && durationMs < THREE_MIN) {
+          filtered.push(current);
+          i++;
+          continue;
+        }
+      }
+      filtered.push(current);
+    }
+    assert.equal(filtered.length, 3); // mantém todos
+  });
+});

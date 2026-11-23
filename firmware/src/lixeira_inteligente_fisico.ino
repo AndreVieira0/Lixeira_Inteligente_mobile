@@ -63,6 +63,11 @@ int    cachedMembersCount = 0;
 unsigned long ultimaLeituraMembers = 0;
 const unsigned long INTERVALO_LEITURA_MEMBERS = 300000UL;
 
+// Filtro de oscilação do sensor: aguarda estabilização
+const int CICLOS_ESTABILIZACAO = 3;  // 3 leituras iguais antes de enviar
+int historicoPercentuais[CICLOS_ESTABILIZACAO];
+int contadorEstabilizacao = 0;
+
 // =====================================================
 // KEEP-ALIVE POWER BANK
 // =====================================================
@@ -345,6 +350,29 @@ bool enviarParaFirestore(int percentual, const String &status, const String &mot
 }
 
 // =====================================================
+// FILTRO DE ESTABILIZAÇÃO
+// =====================================================
+
+bool percentualEstavel(int novoPercentual) {
+  // Adiciona o novo valor ao histórico
+  for (int i = CICLOS_ESTABILIZACAO - 1; i > 0; i--) {
+    historicoPercentuais[i] = historicoPercentuais[i - 1];
+  }
+  historicoPercentuais[0] = novoPercentual;
+  contadorEstabilizacao++;
+
+  // Aguarda ter pelo menos CICLOS_ESTABILIZACAO leituras
+  if (contadorEstabilizacao < CICLOS_ESTABILIZACAO) return false;
+
+  // Verifica se os últimos N ciclos têm o mesmo valor
+  for (int i = 1; i < CICLOS_ESTABILIZACAO; i++) {
+    if (historicoPercentuais[i] != novoPercentual) return false;
+  }
+
+  return true;
+}
+
+// =====================================================
 // SETUP
 // =====================================================
 
@@ -355,6 +383,12 @@ void setup() {
   pinMode(LED_PIN,  OUTPUT);
   digitalWrite(TRIG_PIN, LOW);
   digitalWrite(LED_PIN,  HIGH);
+  
+  // Inicializa histórico de estabilização
+  for (int i = 0; i < CICLOS_ESTABILIZACAO; i++) {
+    historicoPercentuais[i] = -1;
+  }
+  
   Serial.println();
   Serial.println("=== LIXEIRA INTELIGENTE (ESP32 fisico) ===");
   Serial.print("Bin: ");          Serial.println(BIN_ID);
@@ -362,6 +396,7 @@ void setup() {
   Serial.print("Cheia: ");        Serial.print(DISTANCIA_CHEIA); Serial.println(" cm = 100%");
   Serial.print("Limiar envio: "); Serial.print(LIMIAR_MUDANCA);  Serial.println("%");
   Serial.print("Heartbeat: ");    Serial.print(INTERVALO_HEARTBEAT/1000); Serial.println("s");
+  Serial.print("Estabilizacao: "); Serial.print(CICLOS_ESTABILIZACAO); Serial.println(" ciclos");
   conectarWiFi();
   if (WiFi.status() == WL_CONNECTED) {
     autenticadoFirebase = autenticarFirebase();
@@ -394,6 +429,9 @@ void loop() {
   float ocupacao = calcularOcupacao(distancia);
   int percentual = (int)round(ocupacao);
   String status  = obterStatus(ocupacao);
+  
+  // Registra a leitura no histórico de estabilização
+  bool estavel = percentualEstavel(percentual);
 
   Serial.println("------------------------------");
   Serial.print("Wi-Fi: ");     Serial.println(WiFi.status() == WL_CONNECTED ? "Conectado" : "Desconectado");
@@ -401,14 +439,15 @@ void loop() {
   Serial.print("Distancia: "); Serial.print(distancia, 2);
   Serial.print(" cm  |  Ocupacao: "); Serial.print(percentual);
   Serial.print("%  |  Status: "); Serial.println(status);
+  Serial.print("Estavel: "); Serial.println(estavel ? "Sim" : "Aguardando...");
   Serial.print("Members: "); Serial.print(cachedMembersCount); Serial.println(" UID(s)");
 
   bool heartbeat = (millis() - ultimoEnvioHeartbeat >= INTERVALO_HEARTBEAT);
 
   bool precisaEnviar =
-    !primeiraMedicaoEnviada ||
+    (!primeiraMedicaoEnviada && estavel) ||
     reconexaoPendente ||
-    abs(percentual - ultimoPercentualEnviado) >= LIMIAR_MUDANCA ||
+    (estavel && abs(percentual - ultimoPercentualEnviado) >= LIMIAR_MUDANCA) ||
     heartbeat;
 
   bool podeTentarEnviar = (long)(millis() - proximaTentativaEnvio) >= 0;
@@ -421,11 +460,12 @@ void loop() {
       reconexaoPendente       = false;
       proximaTentativaEnvio   = 0;
       ultimoEnvioHeartbeat    = millis();
+      contadorEstabilizacao   = 0; // reset após envio bem-sucedido
     } else {
       proximaTentativaEnvio = millis() + INTERVALO_RETRY_ENVIO;
       Serial.println("Envio falhou. Nova tentativa em 15s.");
     }
-  } else if (!precisaEnviar)              Serial.println("Ocupacao inalterada: sem novo envio.");
+  } else if (!precisaEnviar)              Serial.println("Ocupacao inalterada ou instavel: sem novo envio.");
   else if (!podeTentarEnviar)             Serial.println("Aguardando intervalo.");
   else if (WiFi.status() != WL_CONNECTED) Serial.println("Sem Wi-Fi: medicao pendente.");
   else if (!autenticadoFirebase)          Serial.println("Sem autenticacao: medicao pendente.");
