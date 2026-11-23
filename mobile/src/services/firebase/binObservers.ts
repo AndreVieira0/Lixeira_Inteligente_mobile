@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDocs,
   limit,
   onSnapshot,
   orderBy,
@@ -14,7 +15,8 @@ import type { AlertSettings } from '../../types/alert';
 import { getFirebaseClient } from './client';
 import { toBin, toReading } from './binGateway';
 
-const MAX_HISTORY = 500;
+const MAX_HISTORY = 500; // usado apenas para o observer de nível atual
+const MAX_HISTORY_FETCH = 5000; // busca completa para histórico deduplificado
 
 /**
  * Listen to all bins where `uid` is in the `members` array.
@@ -94,8 +96,41 @@ export function observeReadings(
   );
 }
 
-// ---------- Alert settings ----------
+// ---------- History fetch (one-shot, deduplicated) ----------
 
+/**
+ * Fetches all readings for a bin, removes heartbeat duplicates and returns
+ * only readings where the level actually changed.
+ * Uses getDocs (one-shot) instead of onSnapshot to avoid holding a large listener.
+ */
+export async function fetchReadingsHistory(
+  binId: string,
+  uid: string,
+): Promise<BinReading[]> {
+  const client = getFirebaseClient();
+  if (!client) return [];
+
+  const q = query(
+    collection(client.db, 'measurements'),
+    where('members', 'array-contains', uid),
+    where('binId', '==', binId),
+    orderBy('timestamp', 'desc'),
+    limit(MAX_HISTORY_FETCH),
+  );
+
+  const snap = await getDocs(q);
+  const all = snap.docs.map((d) => toReading(d.id, d.data() as Record<string, unknown>));
+
+  // Deduplicate: keep only readings where level changed from previous
+  if (all.length === 0) return all;
+  const result: BinReading[] = [all[0]];
+  for (let i = 1; i < all.length; i++) {
+    if (all[i].level !== all[i - 1].level) result.push(all[i]);
+  }
+  return result;
+}
+
+// ---------- Alert settings ----------
 /**
  * Listen to all alert settings for the given uid.
  * Returns an unsubscribe function.
